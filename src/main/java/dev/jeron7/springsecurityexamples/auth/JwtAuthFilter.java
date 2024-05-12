@@ -1,5 +1,6 @@
 package dev.jeron7.springsecurityexamples.auth;
 
+import dev.jeron7.springsecurityexamples.token.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,13 +20,15 @@ import java.io.IOException;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final AuthStrategy authStrategy;
-
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
 
     public JwtAuthFilter(@Qualifier("jwtAuthStrategy") AuthStrategy authStrategy,
-                         UserDetailsService userDetailsService) {
+                         UserDetailsService userDetailsService,
+                         TokenRepository tokenRepository) {
         this.authStrategy = authStrategy;
         this.userDetailsService = userDetailsService;
+        this.tokenRepository = tokenRepository;
     }
 
     @Override
@@ -39,18 +42,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
         var token = authHeader.substring(7);
-        var accountEmail = authStrategy.getEmail(token);
-        var securityContext = SecurityContextHolder.getContext();
+        var revoked = tokenRepository.existsByAccessTokenAndActive(token, false);
+        if (!revoked) {
+            var accountEmail = authStrategy.getEmail(token);
+            var securityContext = SecurityContextHolder.getContext();
 
-        if (accountEmail != null && securityContext.getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(accountEmail);
+            if (accountEmail != null && securityContext.getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(accountEmail);
 
-            if (authStrategy.verify(token)) {
-                var authToken = UsernamePasswordAuthenticationToken.authenticated(userDetails,
-                        null,
-                        userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                securityContext.setAuthentication(authToken);
+                if (authStrategy.verify(token)) {
+                    var authToken = UsernamePasswordAuthenticationToken.authenticated(userDetails,
+                            null,
+                            userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    securityContext.setAuthentication(authToken);
+                }
             }
         }
         filterChain.doFilter(request, response);

@@ -2,6 +2,9 @@ package dev.jeron7.springsecurityexamples.account;
 
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -9,25 +12,30 @@ import java.util.Collection;
 import java.util.UUID;
 
 @Entity
+@NoArgsConstructor
 public class Account implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Getter
     private UUID id;
 
+    @Setter
+    @Getter
     private String firstName;
 
+    @Setter
+    @Getter
     private String lastName;
 
     private String email;
 
     private String password;
 
+    @Getter
+    @Setter
     @Enumerated(EnumType.STRING)
     private Role role;
-
-    public Account() {
-    }
 
     public Account(String firstName, String lastName, String email, String password) {
         this.firstName = firstName;
@@ -35,18 +43,6 @@ public class Account implements UserDetails {
         this.email = email;
         this.password = password;
         this.role = Role.USER;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
     }
 
     @Override
@@ -82,29 +78,5 @@ public class Account implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public Role getRole() {
-        return role;
     }
 }

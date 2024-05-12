@@ -3,7 +3,7 @@ package dev.jeron7.springsecurityexamples.auth;
 import dev.jeron7.springsecurityexamples.account.dtos.AccountDetailsDto;
 import dev.jeron7.springsecurityexamples.account.dtos.CreateAccountDto;
 import dev.jeron7.springsecurityexamples.auth.dtos.BasicCredentialsDto;
-import dev.jeron7.springsecurityexamples.auth.dtos.TokenDto;
+import dev.jeron7.springsecurityexamples.auth.dtos.AccessTokenDto;
 import org.apache.coyote.BadRequestException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -48,13 +48,18 @@ public class AuthController {
     }
 
     @PostMapping("verify")
-    public ResponseEntity<?> verify(@RequestBody TokenDto tokenDto) {
+    public ResponseEntity<?> verify(@RequestBody AccessTokenDto accessTokenDto) {
         try {
-            AccountDetailsDto foundUser = authManager.verify(tokenDto);
+            AccountDetailsDto foundUser = authManager.verify(accessTokenDto);
             return ResponseEntity.ok(foundUser);
         } catch (BadRequestException e) {
             return ResponseEntity.status(401).build();
         }
+    }
+
+    @PostMapping("refresh")
+    public ResponseEntity<?> refreshToken() {
+        return null;
     }
 
     @PostMapping("logout")

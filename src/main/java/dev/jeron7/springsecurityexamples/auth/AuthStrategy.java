@@ -8,7 +8,7 @@ public interface AuthStrategy {
 
     String getEmail(String token);
 
-    String generateAccessToken(Account account);
+    String generateAccessToken(Account account, long millisToExpire);
 
-    String generateRefreshToken(Account account);
+    String generateRefreshToken(Account account, long millisToExpire);
 }
