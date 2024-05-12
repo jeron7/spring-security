@@ -1,11 +1,11 @@
 package dev.jeron7.springsecurityexamples.account;
 
 import dev.jeron7.springsecurityexamples.account.dtos.AccountDetailsDto;
-import org.springframework.data.domain.*;
-import org.springframework.data.web.PageableDefault;
-import org.springframework.data.web.SortDefault;
+import dev.jeron7.springsecurityexamples.account.dtos.UpdateAccountDto;
+import dev.jeron7.springsecurityexamples.account.dtos.UpdateRoleDto;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,6 +32,23 @@ public class AccountController {
             return ResponseEntity.notFound().build();
 
         return ResponseEntity.ok(AccountDetailsDto.from(foundUser));
+    }
+
+    @PatchMapping("{id}/role")
+    @PreAuthorize("hasAuthority('admin::write')")
+    public ResponseEntity<AccountDetailsDto> updateRole(@PathVariable UUID id,
+                                                        @RequestBody UpdateRoleDto updateRoleDto) {
+        var foundUser = accountService.findById(id);
+        if (foundUser == null)
+            return ResponseEntity.notFound().build();
+
+        var updatedUser = accountService.update(foundUser, new UpdateAccountDto(null,
+                null,
+                null,
+                null,
+                updateRoleDto.role()));
+
+        return ResponseEntity.ok(AccountDetailsDto.from(updatedUser));
     }
 
     @GetMapping

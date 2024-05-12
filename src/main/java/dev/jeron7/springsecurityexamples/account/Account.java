@@ -83,4 +83,28 @@ public class Account implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Role getRole() {
+        return role;
+    }
 }

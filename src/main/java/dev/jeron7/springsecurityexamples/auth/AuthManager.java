@@ -45,8 +45,8 @@ public class AuthManager {
             throw new BadRequestException("Email already registered!");
 
         var encodedPass = passwordEncoder.encode(createDto.password());
-        var toCreate = new Account(createDto.firstName(), createDto.lastName(), createDto.email(), encodedPass);
-        return AccountDetailsDto.from(accountService.save(toCreate));
+        var toCreate = new CreateAccountDto(createDto.firstName(), createDto.lastName(), createDto.email(), encodedPass);
+        return AccountDetailsDto.from(accountService.create(toCreate));
     }
 
     public AccountDetailsDto verify(TokenDto tokenDto) throws BadRequestException {
