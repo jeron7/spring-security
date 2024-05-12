@@ -1,38 +1,35 @@
 package dev.jeron7.springsecurityexamples.account;
 
 import dev.jeron7.springsecurityexamples.account.dtos.AccountDetailsDto;
-import dev.jeron7.springsecurityexamples.account.dtos.CreateAccountDto;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 public class AccountService {
 
     private final AccountRepository accountRepository;
 
-    private final PasswordEncoder passwordEncoder;
-
-    public AccountService(AccountRepository accountRepository, PasswordEncoder passwordEncoder) {
+    public AccountService(AccountRepository accountRepository) {
         this.accountRepository = Objects.requireNonNull(accountRepository);
-        this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
     }
 
-    public AccountDetailsDto register(CreateAccountDto createAccountDto) {
-        var toCreate = new Account(
-                createAccountDto.firstName(),
-                createAccountDto.lastName(),
-                createAccountDto.email(),
-                passwordEncoder.encode(createAccountDto.password())
-        );
-        var saved = accountRepository.save(toCreate);
-        return AccountDetailsDto.from(saved);
+    public Account save(Account toCreate) {
+        return accountRepository.save(toCreate);
     }
 
     public Account findByEmail(String email) {
-        return accountRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Account not found!"));
+        return accountRepository.findByEmail(email).orElse(null);
+    }
+
+    public Account findById(UUID id) {
+        return accountRepository.findById(id).orElse(null);
+    }
+
+    public Page<AccountDetailsDto> findAll(Pageable pageable) {
+        return accountRepository.findAll(pageable).map(AccountDetailsDto::from);
     }
 }

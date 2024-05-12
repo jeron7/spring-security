@@ -19,8 +19,10 @@ public enum Role {
     }
 
     public Set<SimpleGrantedAuthority> getPrivileges() {
-        return this.privileges.stream()
+        var authorities = this.privileges.stream()
                 .map(privilege -> new SimpleGrantedAuthority(privilege.toString()))
                 .collect(Collectors.toSet());
+        authorities.add(new SimpleGrantedAuthority(STR."ROLE_\{this.name()}"));
+        return authorities;
     }
 }
