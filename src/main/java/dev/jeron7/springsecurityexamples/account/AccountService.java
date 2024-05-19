@@ -1,6 +1,8 @@
 package dev.jeron7.springsecurityexamples.account;
 
 import dev.jeron7.springsecurityexamples.account.dtos.AccountDetailsDto;
+import dev.jeron7.springsecurityexamples.account.dtos.CreateAccountDto;
+import dev.jeron7.springsecurityexamples.account.dtos.UpdateAccountDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,8 +19,19 @@ public class AccountService {
         this.accountRepository = Objects.requireNonNull(accountRepository);
     }
 
-    public Account save(Account toCreate) {
+    public Account create(CreateAccountDto toCreateDto) {
+        var toCreate = new Account(toCreateDto.firstName(),
+                toCreateDto.lastName(),
+                toCreateDto.email(),
+                toCreateDto.password());
         return accountRepository.save(toCreate);
+    }
+
+    public Account update(Account toUpdateAccount, UpdateAccountDto updates) {
+        toUpdateAccount.setFirstName(!Objects.isNull(updates.firstName()) ? updates.firstName() : toUpdateAccount.getFirstName());
+        toUpdateAccount.setLastName(!Objects.isNull(updates.lastName()) ? updates.lastName() : toUpdateAccount.getLastName());
+        toUpdateAccount.setRole(!Objects.isNull(updates.role()) ? updates.role() : toUpdateAccount.getRole());
+        return accountRepository.save(toUpdateAccount);
     }
 
     public Account findByEmail(String email) {

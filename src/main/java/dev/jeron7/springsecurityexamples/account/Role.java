@@ -10,7 +10,7 @@ import static dev.jeron7.springsecurityexamples.account.Privileges.*;
 public enum Role {
     USER(Set.of()),
     MANAGER(Set.of(MANAGER_READ, MANAGER_WRITE)),
-    ADMIN(Set.of(ADMIN_READ, ADMIN_WRITE));
+    ADMIN(Set.of(ADMIN_READ, ADMIN_WRITE, MANAGER_READ, MANAGER_WRITE));
 
     private final Set<Privileges> privileges;
 
