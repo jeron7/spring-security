@@ -1,34 +1,29 @@
 package dev.jeron7.springsecurityexamples.auth;
 
-import dev.jeron7.springsecurityexamples.token.TokenRepository;
+import dev.jeron7.springsecurityexamples.auth.Helpers.HttpServletRequestUtil;
+import dev.jeron7.springsecurityexamples.token.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.antlr.v4.runtime.misc.NotNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Objects;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final AuthStrategy authStrategy;
-    private final UserDetailsService userDetailsService;
-    private final TokenRepository tokenRepository;
+    private final TokenService tokenService;
 
-    public JwtAuthFilter(@Qualifier("jwtAuthStrategy") AuthStrategy authStrategy,
-                         UserDetailsService userDetailsService,
-                         TokenRepository tokenRepository) {
-        this.authStrategy = authStrategy;
-        this.userDetailsService = userDetailsService;
-        this.tokenRepository = tokenRepository;
+    public JwtAuthFilter(TokenService tokenService) {
+        this.tokenService = Objects.requireNonNull(tokenService);
     }
 
     @Override
@@ -40,23 +35,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String authHeader = request.getHeader("Authorization");
-        var token = authHeader.substring(7);
-        var revoked = tokenRepository.existsByAccessTokenAndActive(token, false);
-        if (!revoked) {
-            var accountEmail = authStrategy.getEmail(token);
+        String accessToken = HttpServletRequestUtil.extractFromBearer(request);
+        if (tokenService.isValidAndActiveAccessToken(accessToken)) {
+            var token = tokenService.findByTokenStr(accessToken);
             var securityContext = SecurityContextHolder.getContext();
 
-            if (accountEmail != null && securityContext.getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(accountEmail);
-
-                if (authStrategy.verify(token)) {
-                    var authToken = UsernamePasswordAuthenticationToken.authenticated(userDetails,
-                            null,
-                            userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    securityContext.setAuthentication(authToken);
-                }
+            if (token != null && securityContext.getAuthentication() == null) {
+                UserDetails userDetails = token.getAccount();
+                var authToken = UsernamePasswordAuthenticationToken.authenticated(userDetails,
+                        null,
+                        userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                securityContext.setAuthentication(authToken);
             }
         }
         filterChain.doFilter(request, response);
@@ -64,11 +54,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private boolean ignoreRequest(HttpServletRequest request) {
         var isAuthServletPath = request.getServletPath().startsWith("/auth");
-        return isAuthServletPath || !isValidAuthHeader(request);
-    }
-
-    public static boolean isValidAuthHeader(HttpServletRequest request) {
-        var authHeader = request.getHeader("Authorization");
-        return authHeader != null && authHeader.startsWith("Bearer");
+        return isAuthServletPath || !HttpServletRequestUtil.hasBearerAuthHeader(request);
     }
 }

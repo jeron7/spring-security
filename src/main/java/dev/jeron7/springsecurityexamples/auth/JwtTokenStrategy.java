@@ -1,24 +1,36 @@
 package dev.jeron7.springsecurityexamples.auth;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.RegisteredClaims;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.RSAKeyProvider;
 import dev.jeron7.springsecurityexamples.account.Account;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.MalformedInputException;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
-public class JwtAuthStrategy implements AuthStrategy {
+public class JwtTokenStrategy implements TokenStrategy {
 
     private final RSAKeyProvider keyProvider;
 
-    public JwtAuthStrategy(RSAKeyProvider keyProvider) {
+    public JwtTokenStrategy(RSAKeyProvider keyProvider) {
         this.keyProvider = keyProvider;
+    }
+
+
+    @Override
+    public UUID getId(String token) {
+        Algorithm algorithm = Algorithm.RSA256(keyProvider);
+
+        if (verify(token)) {
+            var decodedJwt = JWT.require(algorithm).build().verify(token);
+            return UUID.fromString(decodedJwt.getId());
+        }
+        return null;
     }
 
     @Override
@@ -45,30 +57,19 @@ public class JwtAuthStrategy implements AuthStrategy {
         }
     }
 
-    @Override
-    public String generateAccessToken(Account account, long millisToExpire) {
+    public String generateToken(UUID id, String email, long millisToExpire) {
         Algorithm algorithm = Algorithm.RSA256(keyProvider);
 
         var issuedAt = new Date();
         var expireAt = new Date(issuedAt.getTime() + millisToExpire);
-
-        return JWT.create()
-                .withSubject(account.getUsername())
+        var tokenBuilder = JWT.create()
+                .withJWTId(id.toString())
                 .withIssuedAt(issuedAt)
-                .withExpiresAt(expireAt)
-                .sign(algorithm);
-    }
+                .withExpiresAt(expireAt);
 
-    @Override
-    public String generateRefreshToken(Account account, long minutesToExpire) {
-        Algorithm algorithm = Algorithm.RSA256(keyProvider);
+        if (email != null)
+            tokenBuilder.withSubject(email);
 
-        var issuedAt = new Date();
-        var expireAt = new Date(issuedAt.getTime() + minutesToExpire);
-
-        return JWT.create()
-                .withIssuedAt(issuedAt)
-                .withExpiresAt(expireAt)
-                .sign(algorithm);
+        return tokenBuilder.sign(algorithm);
     }
 }

@@ -1,14 +1,13 @@
 package dev.jeron7.springsecurityexamples.auth;
 
-import dev.jeron7.springsecurityexamples.account.Account;
 import dev.jeron7.springsecurityexamples.account.AccountService;
 import dev.jeron7.springsecurityexamples.account.dtos.AccountDetailsDto;
 import dev.jeron7.springsecurityexamples.account.dtos.CreateAccountDto;
+import dev.jeron7.springsecurityexamples.auth.dtos.AccessTokenDto;
 import dev.jeron7.springsecurityexamples.auth.dtos.BasicCredentialsDto;
 import dev.jeron7.springsecurityexamples.auth.dtos.LoginDto;
-import dev.jeron7.springsecurityexamples.auth.dtos.AccessTokenDto;
-import dev.jeron7.springsecurityexamples.token.Token;
 import dev.jeron7.springsecurityexamples.token.TokenRepository;
+import dev.jeron7.springsecurityexamples.token.TokenService;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -21,23 +20,17 @@ import java.util.Objects;
 @Component
 public class AuthManager {
 
-    private final long millisToExpireAccessToken;
-    private final long millisToExpireRefreshToken;
-    private final AuthStrategy authStrategy;
     private final AccountService accountService;
-    private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
     public AuthManager(@Value("${app.security.expire_access_token:3600}") long millisToExpireAccessToken,
-                       AuthStrategy authStrategy,
+                       TokenStrategy tokenStrategy,
                        AccountService accountService,
                        TokenRepository tokenRepository,
-                       PasswordEncoder passwordEncoder) {
-        this.millisToExpireAccessToken = millisToExpireAccessToken * 1000;
-        this.millisToExpireRefreshToken = this.millisToExpireAccessToken * 2;
-        this.authStrategy = Objects.requireNonNull(authStrategy);
+                       PasswordEncoder passwordEncoder, TokenService tokenService) {
+        this.tokenService = Objects.requireNonNull(tokenService);
         this.accountService = Objects.requireNonNull(accountService);
-        this.tokenRepository = Objects.requireNonNull(tokenRepository);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
     }
 
@@ -49,7 +42,7 @@ public class AuthManager {
         if (!passwordEncoder.matches(credentialsDto.password(), account.getPassword()))
             throw new AuthenticationCredentialsNotFoundException("Password is wrong!");
 
-        return createTokens(account);
+        return tokenService.createTokens(account);
     }
 
     public AccountDetailsDto register(CreateAccountDto createDto) throws BadRequestException {
@@ -64,30 +57,21 @@ public class AuthManager {
 
     public AccountDetailsDto verify(AccessTokenDto accessTokenDto) throws BadRequestException {
         var accessToken = accessTokenDto.accessToken();
-        if (!authStrategy.verify(accessToken)) {
-            var token = tokenRepository.findByAccessToken(accessToken);
-            disableToken(token);
+
+        if (!tokenService.isValidAndActiveAccessToken(accessToken))
             throw new BadRequestException("Invalid or expired token!");
-        }
 
-        var email = authStrategy.getEmail(accessToken);
-        var foundUser = accountService.findByEmail(email);
-        return AccountDetailsDto.from(foundUser);
+        var token = tokenService.findByTokenStr(accessToken);
+        return AccountDetailsDto.from(token.getAccount());
     }
 
-    private LoginDto createTokens(Account account) {
-        var accessToken = authStrategy.generateAccessToken(account, millisToExpireAccessToken);
-        var refreshToken = authStrategy.generateRefreshToken(account, millisToExpireRefreshToken);
-
-        tokenRepository.save(new Token(accessToken, refreshToken));
-
-        return new LoginDto(accessToken, refreshToken, millisToExpireAccessToken / 1000);
-    }
-
-    private void disableToken(Token token) {
-        if (token != null) {
-            token.setActive(false);
-            tokenRepository.save(token);
+    public LoginDto refreshToken(String refreshToken) {
+        if (!tokenService.isValidAndActiveRefreshToken(refreshToken)) {
+            throw new AuthenticationCredentialsNotFoundException("Invalid refresh token!");
         }
+
+        var account = tokenService.findByTokenStr(refreshToken).getAccount();
+        tokenService.disableAccountTokens(account);
+        return tokenService.createTokens(account);
     }
 }

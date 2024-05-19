@@ -1,6 +1,8 @@
 package dev.jeron7.springsecurityexamples.token;
 
+import dev.jeron7.springsecurityexamples.account.Account;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,21 +14,26 @@ import java.util.UUID;
 @NoArgsConstructor
 public class Token {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    public UUID id;
+    private UUID id;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    public String accessToken;
+    private String accessToken;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    public String refreshToken;
+    private String refreshToken;
+
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
 
     @Setter
-    public boolean active;
+    private boolean active;
 
-    public Token(String accessToken, String refreshToken) {
-        this.active = true;
+    public Token(UUID id, String accessToken, String refreshToken, Account account) {
+        this.id = id;
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
+        this.account = account;
+        this.active = true;
     }
 }
